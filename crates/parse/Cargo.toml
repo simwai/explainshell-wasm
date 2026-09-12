@@ -1,0 +1,15 @@
+﻿[package]
+name = "explainshell-parse"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+description = "Shell parser (bashlex port) for explainshell WASM"
+categories = { workspace = true }
+keywords = { workspace = true }
+
+[dependencies]
+explainshell-core = { path = "../core" }
+serde = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }

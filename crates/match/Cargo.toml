@@ -1,0 +1,16 @@
+﻿[package]
+name = "explainshell-match"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+description = "Matcher algorithm for explainshell WASM"
+categories = { workspace = true }
+keywords = { workspace = true }
+
+[dependencies]
+explainshell-core = { path = "../core" }
+explainshell-parse = { path = "../parse" }
+explainshell-data = { path = "../data" }
+thiserror = { workspace = true }
+anyhow = { workspace = true }

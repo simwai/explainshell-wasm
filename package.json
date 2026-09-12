@@ -1,0 +1,68 @@
+{
+  "name": "explainshell-wasm",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "explainshell compiled to WebAssembly with TypeScript API",
+  "main": "dist/index.mjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./runtime/node": {
+      "import": "./dist/runtime/node.mjs",
+      "types": "./dist/runtime/node.d.ts"
+    },
+    "./runtime/browser": {
+      "import": "./dist/runtime/browser.mjs",
+      "types": "./dist/runtime/browser.d.ts"
+    },
+    "./data": "./dist/explainshell.data.msgpack"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "npm run build:wasm && unbuild",
+    "build:wasm": "node scripts/build-wasm.mjs",
+    "prepublishOnly": "npm run build",
+    "release-patch": "node scripts/release.js patch",
+    "release-minor": "node scripts/release.js minor",
+    "release-major": "node scripts/release.js major",
+    "release": "node scripts/release.js",
+    "test": "vitest run",
+    "test:node": "vitest run --pool=forks src/__tests__/api.test.ts src/__tests__/matcher.test.ts",
+    "test:browser": "vitest run --config vitest.browser.config.ts",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "prepare": "husky install"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@biomejs/biome": "^1.8.0",
+    "@types/node": "^20.14.0",
+    "@vitest/browser": "^2.1.9",
+    "glob": "^13.0.6",
+    "husky": "^9.1.0",
+    "lint-staged": "^15.2.0",
+    "playwright": "^1.63.0",
+    "tsx": "^4.15.0",
+    "typescript": "^5.5.0",
+    "unbuild": "^3.6.1",
+    "vitest": "^2.0.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,css}": "biome check --write"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": ["explainshell", "wasm", "webassembly", "shell", "bash", "manpage", "explainer"],
+  "author": "",
+  "license": "GPL-3.0-or-later",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

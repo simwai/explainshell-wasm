@@ -1,0 +1,22 @@
+﻿[package]
+name = "explainshell-wasm"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+description = "WASM bindings for explainshell"
+categories = { workspace = true }
+keywords = { workspace = true }
+
+[dependencies]
+explainshell-core = { path = "../core" }
+explainshell-parse = { path = "../parse" }
+explainshell-match = { path = "../match" }
+explainshell-data = { path = "../data" }
+wasm-bindgen = { workspace = true }
+console_error_panic_hook = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[lib]
+crate-type = ["cdylib"]

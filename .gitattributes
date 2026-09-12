@@ -1,0 +1,38 @@
+# Force LF line endings for all text files
+* text=auto eol=lf
+
+# Explicitly declare text files
+*.ts    text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.js    text eol=lf
+*.mjs   text eol=lf
+*.cjs   text eol=lf
+*.html  text eol=lf
+*.css   text eol=lf
+*.svg   text eol=lf
+*.sh    text eol=lf
+*.rs    text eol=lf
+*.toml  text eol=lf
+*.py    text eol=lf
+*.lock  text eol=lf
+
+# Binary files — never mangle
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.webp  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.eot   binary
+*.zip   binary
+*.tar   binary
+*.gz    binary
+*.wasm  binary
+*.msgpack binary
+*.db    binary

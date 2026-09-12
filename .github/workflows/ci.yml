@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --workspace
+
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: cargo install wasm-bindgen-cli --version 0.2.128 --locked
+      - run: pip install msgpack
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: npx @biomejs/biome check .
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [rust, build-test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          registry-url: https://registry.npmjs.org/
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: cargo install wasm-bindgen-cli --version 0.2.128 --locked
+      - run: pip install msgpack
+      - run: npm ci
+      - run: npm run build
+      - run: npm publish --access public
