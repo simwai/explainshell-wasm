@@ -38,6 +38,12 @@ export class BrowserExplainshell implements ExplainshellInstance {
     return parseExplainResult(this.requireInner().explain(command))
   }
 
+  async explainAst(astJson: string, _options?: ExplainOptions): Promise<ExplainResult> {
+    if (!this.inner) await this.initialize()
+    void _options
+    return parseExplainResult(this.requireInner().explain_ast(astJson))
+  }
+
   manpageCount(): number {
     return this.requireInner().manpage_count()
   }

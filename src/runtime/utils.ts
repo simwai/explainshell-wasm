@@ -24,6 +24,8 @@ export interface WasmGlueModule {
 export interface WasmExplainshell {
   /** Explain a command; returns ExplainResult JSON */
   explain(command: string): string
+  /** Explain from a pre-parsed AST JSON; returns ExplainResult JSON */
+  explain_ast(astJson: string): string
   /** Number of manpages in the bundle */
   manpage_count(): number
   /** Release WASM-side resources */

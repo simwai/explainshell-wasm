@@ -110,6 +110,8 @@ export type ExplainResultGroup = MatchGroup
 export interface ExplainshellInstance {
   /** Explain a shell command */
   explain(command: string, options?: ExplainOptions): Promise<ExplainResult>
+  /** Explain from a pre-parsed AST JSON string (bashlex-compatible) */
+  explainAst(astJson: string, options?: ExplainOptions): Promise<ExplainResult>
   /** Number of manpages in the loaded bundle */
   manpageCount(): number
   /** Release the instance */
