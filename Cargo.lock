@@ -64,6 +64,8 @@ dependencies = [
  "explainshell-core",
  "explainshell-data",
  "explainshell-parse",
+ "serde",
+ "serde_json",
  "thiserror",
 ]
 

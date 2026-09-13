@@ -48,6 +48,9 @@ impl Explainshell {
     /// against the manpage data, and returns the ExplainResult as JSON.
     pub fn explain(&self, command: &str) -> Result<String, JsValue> {
         let ast = parse(command, true, Some(1)).map_err(|e| js_err(e.to_string()))?;
+        if ast.is_empty() {
+            return Err(js_err("no command to explain".to_string()));
+        }
         let result = explain_ast_nodes(&ast, &self.data).map_err(|e| js_err(e.to_string()))?;
         serde_json::to_string(&result).map_err(|e| js_err(e.to_string()))
     }

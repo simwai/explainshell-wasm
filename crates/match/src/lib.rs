@@ -150,6 +150,9 @@ impl<'a> Matcher<'a> {
     fn match_ast(&mut self) -> Result<Vec<MatchGroup>, MatchError> {
         let ast = explainshell_parse::parse(self.input, true, Some(1))
             .map_err(|_| MatchError::EmptyInput)?;
+        if ast.is_empty() {
+            return Err(MatchError::EmptyInput);
+        }
         for node in &ast {
             self.walk(node)?;
         }
@@ -278,14 +281,14 @@ impl<'a> Matcher<'a> {
 
         // Check for subcommand
         let mut endpos = word_node.span.end;
-        let idx_next_word = find_first_kind(parts, "word");
-        if !manpage.subcommands.is_empty() && idx_next_word != -1 {
-            if let AstNode::Word(next_word) = &parts[idx_next_word as usize] {
-                if next_word.parts.is_empty() {
-                    let multi = format!("{} {}", word_node.text, next_word.text);
+        for part in parts {
+            if let AstNode::Word(w) = part {
+                if w.span.start > word_node.span.start {
+                    let multi = format!("{} {}", word_node.text, w.text);
                     if let Ok(sub_mps) = self.find_man_pages(&multi) {
                         manpage = sub_mps[0].clone();
-                        endpos = next_word.span.end;
+                        endpos = w.span.end;
+                        break;
                     }
                 }
             }
@@ -311,20 +314,31 @@ impl<'a> Matcher<'a> {
             debug_info: Some(serde_json::json!({"kind": "synopsis"})),
         });
 
-        self.groups.push(group.clone());
         self.group_stack.push(group);
 
-        // Match remaining words as arguments
+        // Match remaining words and redirects as arguments
         for part in parts {
-            if let AstNode::Word(w) = part {
-                if w.span.start != word_node.span.start || w.span.end != word_node.span.end {
-                    self.visit_word(w)?;
+            match part {
+                AstNode::Word(w) => {
+                    if w.span.start != word_node.span.start || w.span.end != word_node.span.end {
+                        self.visit_word(w)?;
+                    }
                 }
+                AstNode::Redirect { output, span, .. } => {
+                    if let explainshell_parse::RedirectTarget::Word(w) = output {
+                        self.add_redirect_help(*span);
+                        for part in &w.parts {
+                            self.walk(part)?;
+                        }
+                    }
+                }
+                _ => {}
             }
         }
 
-        // End command group
-        self.end_command();
+        // End command group and move completed group to groups
+        let completed = self.group_stack.pop().unwrap();
+        self.groups.push(completed);
         Ok(())
     }
 
@@ -362,7 +376,7 @@ impl<'a> Matcher<'a> {
                     start,
                     end,
                     &option.text,
-                    None,
+                    Some(text),
                     &serde_json::json!({"kind": "option", "short": option.short, "long": option.long, "has_argument": option.has_argument}),
                 );
                 if word_to_match != text {
@@ -448,10 +462,7 @@ impl<'a> Matcher<'a> {
     }
 
     fn match_short_options(&mut self, text: &str, start: usize, end: usize) -> Result<(), MatchError> {
-        let mut tokens = vec![text[0..2].to_string()];
-        for c in text[2..].chars() {
-            tokens.push(c.to_string());
-        }
+        let mut tokens: Vec<String> = text.chars().skip(1).map(|c| c.to_string()).collect();
         let mut pos = start;
         let mut prev_option: Option<explainshell_core::CliOption> = None;
 
@@ -467,7 +478,7 @@ impl<'a> Matcher<'a> {
                             start,
                             end,
                             &option.text,
-                            None,
+                            Some(text),
                             &serde_json::json!({"kind": "option", "short": option.short, "long": option.long, "has_argument": option.has_argument}),
                         );
                         self.current_option = None;
@@ -477,7 +488,7 @@ impl<'a> Matcher<'a> {
                         pos,
                         pos + t.len(),
                         &option.text,
-                        None,
+                        Some(t.as_str()),
                         &serde_json::json!({"kind": "option", "short": option.short, "long": option.long, "has_argument": option.has_argument}),
                     );
                 } else if i > 0 && prev_option.as_ref().map(|o| matches!(o.has_argument, HasArgument::Bool(true))).unwrap_or(false) {
@@ -590,5 +601,46 @@ mod tests {
         let json = serde_json::to_string(&result).unwrap();
         let parsed: ExplainResult = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.groups.len(), result.groups.len());
+    }
+
+    #[test]
+    fn explain_git_subcommand_resolves_git_commit_manpage() {
+        let data = load_test_data();
+        let result = explain_command("git commit -m \"fix bug\"", &data).expect("explain failed");
+        let command_groups: Vec<_> = result.groups.iter().filter(|g| g.name != "shell").collect();
+        assert!(!command_groups.is_empty(), "expected command group for git commit");
+        let manpage = command_groups[0].manpage.as_ref().expect("expected manpage");
+        assert_eq!(manpage.name, "git-commit");
+    }
+
+    #[test]
+    fn explain_long_options_are_matched() {
+        let data = load_test_data();
+        let result = explain_command("tar --extract --verbose --file=foo.tar", &data).expect("explain failed");
+        let command_groups: Vec<_> = result.groups.iter().filter(|g| g.name != "shell").collect();
+        assert!(!command_groups.is_empty(), "expected command group");
+        let results = &command_groups[0].results;
+        assert!(results.iter().any(|m| m.text.as_deref() == Some("extract files") || m.match_text.as_deref() == Some("--extract")),
+                "expected --extract match");
+    }
+
+    #[test]
+    fn explain_option_with_absorbed_argument() {
+        let data = load_test_data();
+        let result = explain_command("tar -f archive.tar", &data).expect("explain failed");
+        let command_groups: Vec<_> = result.groups.iter().filter(|g| g.name != "shell").collect();
+        assert!(!command_groups.is_empty(), "expected command group");
+        let results = &command_groups[0].results;
+        assert!(results.iter().any(|m| m.match_text.as_deref() == Some("-f")), "expected -f match");
+    }
+
+    #[test]
+    fn explain_redirect_is_shell_result() {
+        let data = load_test_data();
+        let result = explain_command("tar -xvf foo.tar > out.txt", &data).expect("explain failed");
+        let shell = result.groups.iter().find(|g| g.name == "shell");
+        assert!(shell.is_some(), "expected shell group for redirect");
+        assert!(shell.unwrap().results.iter().any(|r| r.debug_info.as_ref().and_then(|d| d.get("kind").and_then(|k| k.as_str())) == Some("redirect")),
+                "expected redirect result");
     }
 }
