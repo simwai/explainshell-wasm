@@ -4,8 +4,6 @@
 //! AST (see ast.rs). The lexer module lands next; the AST layer below is
 //! shared by both.
 
-// TODO(owner): matcher wiring -- parser done, matcher port next
-
 pub mod ast;
 pub mod lexer;
 pub mod parser;
