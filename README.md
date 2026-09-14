@@ -20,17 +20,22 @@ npm install explainshell-wasm
 
 ## Data notice
 
-Explaining commands requires the manpage database. By default the build
-bundles a tiny CI fixture (`test/fixtures/test.db`, 4 manpages). For real
-coverage, generate `explainshell.db` with the
-[explainshell](https://github.com/idank/explainshell) extraction pipeline
-(Ubuntu 26.04 recommended), then either place it at the repo root as
-`explainshell.db` or point the build at it:
+Explaining commands requires the manpage database. **Since v0.1.1, the build automatically downloads the full database from explainshell's GitHub releases** (the `db-latest` tag, ~20-30 MB MessagePack bundle covering thousands of manpages from Ubuntu/Arch). No manual setup required.
 
+Data source priority (first match wins):
+
+1. `$EXPLAINSHELL_DB` environment variable — explicit path to a local `explainshell.db`
+2. `./explainshell.db` in the repo root — local database file
+3. `.explainshell-cache/` — cached auto-downloaded database (gitignored)
+4. **Auto-download from GitHub releases** — fetches newest `explainshell-*.db.zst`, verifies SHA256, decompresses with zstd-wasm
+5. CI fixture fallback (`test/fixtures/test.db`) — 4 manpages only, with loud warning
+
+To force the CI fixture (e.g., for minimal test builds):
 ```bash
-set EXPLAINSHELL_DB=C:\path\to\explainshell.db
-npm run build
+EXPLAINSHELL_DB= npm run build  # empty value skips auto-download
 ```
+
+**License note:** The database contains upstream manpage text (GPL, BSD, MIT, etc.). See `LICENSE-DATABASE.md` for redistribution terms. The `source` field in each entry identifies the originating package.
 
 ## Publishing
 
@@ -56,15 +61,15 @@ npm publish
 ### Node.js
 
 ```typescript
-import { createExplainshell, explain } from 'explainshell-wasm';
+import { createExplainshell, explain } from 'explainshell-wasm'
 
 // One-shot
-const result = await explain('tar -xvf archive.tar');
+const result = await explain('tar -xvf archive.tar')
 
 // Reusable instance (WASM module is instantiated once and reused)
-const explainshell = await createExplainshell();
-console.log('manpages:', explainshell.manpageCount());
-const result2 = await explainshell.explain('sudo tar -xvf archive.tar');
+const explainshell = await createExplainshell()
+console.log('manpages:', explainshell.manpageCount())
+const result2 = await explainshell.explain('sudo tar -xvf archive.tar')
 ```
 
 By default the loader resolves `dist/wasm-node/explainshell.js` and
@@ -73,7 +78,7 @@ By default the loader resolves `dist/wasm-node/explainshell.js` and
 ```typescript
 const explainshell = await createExplainshell({
   dataPath: '/path/to/explainshell.data.msgpack',
-});
+})
 ```
 
 ### Browser
@@ -81,16 +86,16 @@ const explainshell = await createExplainshell({
 Serve `dist/wasm-web/` and `dist/explainshell.data.msgpack` from the same origin with correct MIME types (`application/wasm` for `.wasm`, `text/javascript` for `.js`, `application/octet-stream` for `.msgpack`), then:
 
 ```typescript
-import { createExplainshell } from 'explainshell-wasm';
+import { createExplainshell } from 'explainshell-wasm'
 
 const explainshell = await createExplainshell({
   runtime: 'browser',
   glueUrl: '/wasm-web/explainshell.js',
   wasmUrl: '/wasm-web/explainshell_bg.wasm',
   dataUrl: '/explainshell.data.msgpack',
-});
-const result = await explainshell.explain(editorValue);
-console.log(result);
+})
+const result = await explainshell.explain(editorValue)
+console.log(result)
 ```
 
 ## API reference
@@ -114,7 +119,7 @@ await createExplainshell(options?: {
 ### `explain(command, options?)`
 
 ```typescript
-await explain('git commit -m "msg"');   // ExplainResult
+await explain('git commit -m "msg"') // ExplainResult
 ```
 
 ### `resetExplainshell()`
@@ -125,8 +130,8 @@ Terminates the cached instance. Mainly useful in tests.
 
 ```typescript
 interface ExplainOptions {
-  distro?: string;    // reserved for multi-distro bundles
-  release?: string;   // reserved for multi-distro bundles
+  distro?: string // reserved for multi-distro bundles
+  release?: string // reserved for multi-distro bundles
 }
 ```
 
@@ -134,25 +139,25 @@ interface ExplainOptions {
 
 ```typescript
 interface ExplainResult {
-  groups: MatchGroup[];   // one "shell" group plus one per command
-  expansions: Expansion[];
+  groups: MatchGroup[] // one "shell" group plus one per command
+  expansions: Expansion[]
 }
 
 interface MatchGroup {
-  name: string;                 // e.g. "shell", "command1"
-  results: MatchResult[];
-  manpage?: ParsedManpage | null;
-  suggestions?: ParsedManpage[];
-  error?: string | null;
-  positional_index: number;
+  name: string // e.g. "shell", "command1"
+  results: MatchResult[]
+  manpage?: ParsedManpage | null
+  suggestions?: ParsedManpage[]
+  error?: string | null
+  positional_index: number
 }
 
 interface MatchResult {
-  start: number;
-  end: number;
-  text?: string | null;         // help text, null when unknown
-  match_text?: string | null;   // matched input span
-  debug_info?: Record<string, unknown> | null;
+  start: number
+  end: number
+  text?: string | null // help text, null when unknown
+  match_text?: string | null // matched input span
+  debug_info?: Record<string, unknown> | null
 }
 ```
 
@@ -200,6 +205,8 @@ npm run build        # build:wasm + TypeScript (via unbuild)
 `wasm32-wasi` target name from older docs is now `wasm32-wasip1` in Rust;
 this project does not use it (see "No WASI" above).
 
+**Auto-download:** On first build (or when the upstream `db-latest` release updates), the script downloads ~100 MB compressed database, verifies SHA256, decompresses to `.explainshell-cache/`, and exports the MessagePack bundle. Subsequent builds use the cache. Set `GITHUB_TOKEN` env var for higher API rate limits (60/hr unauthenticated).
+
 ## Development
 
 ```bash
@@ -215,12 +222,12 @@ Git hooks (Husky + lint-staged) run Biome on staged JS/TS files at commit and th
 
 ### Test matrix
 
-| Suite | Environment | What it covers |
-|---|---|---|
-| `api.test.ts` | Node | Type shapes, response envelopes |
-| `matcher.test.ts` | Node + built `.wasm` | explain() groups, unknown-program errors, empty input |
-| `browser-serve.test.ts` | Node + local HTTP | `BrowserExplainshell` fetching glue/wasm/data over HTTP |
-| `browser.test.ts` | Real headless Chromium | Full browser path: fetch, instantiate, explain |
+| Suite                   | Environment            | What it covers                                          |
+| ----------------------- | ---------------------- | ------------------------------------------------------- |
+| `api.test.ts`           | Node                   | Type shapes, response envelopes                         |
+| `matcher.test.ts`       | Node + built `.wasm`   | explain() groups, unknown-program errors, empty input   |
+| `browser-serve.test.ts` | Node + local HTTP      | `BrowserExplainshell` fetching glue/wasm/data over HTTP |
+| `browser.test.ts`       | Real headless Chromium | Full browser path: fetch, instantiate, explain          |
 
 Integration suites skip automatically when `dist/` is not built.
 
@@ -261,7 +268,3 @@ explainshell-wasm/
 - The data bundle for a full distro is ~20-30 MB; reuse the instance returned by `createExplainshell`.
 - The matcher currently resolves commands to manpages; full token-level option matching lands with the bashlex port.
 - Browser testing covers headless Chromium. Other engines should work (the module only needs post-MVP features all modern browsers ship), but they are not in the matrix.
-
-## License
-
-GPL-3.0-or-later, same as explainshell. explainshell is copyright its contributors; this wrapper is a derivative work.

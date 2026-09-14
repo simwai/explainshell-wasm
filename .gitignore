@@ -24,6 +24,9 @@ env/
 *.pem
 *.key
 
+# Database cache (auto-downloaded explainshell.db)
+.explainshell-cache/
+
 # Logs
 *.log
 
