@@ -25,6 +25,8 @@ env/
 
 # Database cache (auto-downloaded explainshell.db)
 .explainshell-cache/
+dist/explainshell.data.msgpack
+dist/temp-*.db
 
 # Logs
 *.log

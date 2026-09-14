@@ -25,6 +25,7 @@
   "scripts": {
     "build": "npm run build:wasm && unbuild",
     "build:wasm": "node scripts/build-wasm.mjs",
+    "postinstall": "node scripts/download-data-bundle.mjs",
     "prepublishOnly": "npm run build",
     "release-patch": "node scripts/release.js patch",
     "release-minor": "node scripts/release.js minor",
