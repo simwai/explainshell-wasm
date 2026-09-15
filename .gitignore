@@ -27,6 +27,7 @@ env/
 .explainshell-cache/
 dist/explainshell.data.msgpack
 dist/temp-*.db
+dist/.build-complete
 
 # Logs
 *.log
