@@ -166,6 +166,18 @@ Names must reveal intent, usage, and role. Reference: Robert C. Martin, *Clean C
 - Avoid file names that differ only by case (`user-service.ts` vs `UserService.ts`); they collide on case-insensitive filesystems and break cross-platform checkouts.
 - Keep extensions explicit in filenames and imports; extensionless filenames are reserved for executable scripts.
 
+## File Separation
+
+Each distinct concept gets its own file. Do not combine multiple concepts into a single file.
+
+- One class per file. A file must contain at most one class definition.
+- Errors are their own files. Each error type or error category gets its own file.
+- Types and interfaces are their own files. Each type or interface gets its own file.
+- Schemas are their own files. Each schema definition gets its own file.
+- A file exporting several unrelated helpers should split (per `## File naming`).
+
+These rules apply across all stacks. A file that mixes classes, types, or interfaces violates this rule even if the combined file is shorter or more convenient.
+
 ## Security defaults
 
 - Sanitize untrusted input and output where relevant.
