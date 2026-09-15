@@ -1,6 +1,6 @@
 {
   "name": "explainshell-wasm",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "description": "explainshell compiled to WebAssembly with TypeScript API",
   "main": "dist/index.mjs",
