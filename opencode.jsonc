@@ -20,7 +20,8 @@
     "prompt-system/05-impl-style.md",
     "prompt-system/06-misc.md",
     "prompt-system/07-protocols.md",
-    "prompt-system/08-plan-actual-gate.md"
+    "prompt-system/08-plan-actual-gate.md",
+    "When the user asks for a diagram, flowchart, sequence diagram, class diagram, state diagram, ER diagram, or any visual representation using Mermaid syntax, call the mermaid_diagram tool with the Mermaid source code. Embed the returned markdown image directly in your response. Supported: flowchart, sequenceDiagram, classDiagram, stateDiagram-v2, erDiagram."
   ],
 
   // Prefer the read-only BabaSensei planning path by default. The native Build
