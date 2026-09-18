@@ -53,6 +53,7 @@ Template field requirements:
 - `PLAN`: `Target` [required]; `Scope` [required]; `Scope type` [required]; `Pending review items` [required]; `Source` [required]; `System Constraints` [required]; `Will change` [required]; `Will preserve` [required]; `Conventions` [required]; `Risks` [optional]; `Logical constraints` [optional]; `Awaiting` [required].
 - `PATCH`: `Rewrite Contract` [required]; `Patch` [required]; `Self-Review` [required]; `Compliance Audit` [required]; `Constraint Verification` [required]; `Verification` [required]; `Plan-Actual` [required when plan exists]; `Commit/Push Gate` [required when edits exist].
 - `DRIFT`: `Spec` [required]; `Registry check` [required]; `Verified claims` [optional]; `Diverged claims` [optional]; `Orphaned mappings` [optional]; `Code-exceeds-spec` [optional]; `HALT` [optional]; `Fresh-eyes review` [optional]; `Exit` [required].
+- `DESIGN_PLAN`: `Target` [required]; `Scope` [required]; `Design decisions` [required]; `Constraints` [required]; `Verification` [required]; `Allowed next move` [required].
 - `HANDOFF`: `For the human` [required]; `For the agent` [required]; `Persona Handoff Contract` [required]; `Status` [required].
 - `TEST_STRATEGY`: `Test Strategy` [required]; `Binding items` [required]; `Strong hints` [required]; `Weak hints` [optional].
 - `FAILURE`: `Status` [required]; `Reason` [required]; `Last valid phase` [required]; `Failed phase` [required]; `Retry` [required].
@@ -772,6 +773,46 @@ Fresh-eyes review (when requested):
 Exit:
 - Clean -> [prior phase]
 - Findings requiring writes -> PLAN (drift_findings and spec_version travel via handoff contract)
+```
+
+## `DESIGN_PLAN` template
+
+```txt
+[PHASE: DESIGN_PLAN]
+
+# For the human
+[2-4 plain-language sentences: what design decisions were made, what constraints
+BabaDev must preserve, and what the next step is]
+
+# For the agent
+
+# Design Plan
+Target: [file/module/feature]
+Scope: [full|partial]
+
+Design decisions:
+- Palette: [chosen palette] -- [reason]
+- Typography: [chosen stacks] -- [reason]
+- Iconography: [chosen icon set] -- [reason]
+- Component library: [chosen library] -- [reason]
+- Accessibility: [key a11y requirements]
+- SEO: [key SEO requirements]
+- Motion: [motion guidelines]
+- Other: [any additional design decisions]
+
+Constraints:
+- [constraint BabaDev must not break]
+- [constraint]
+
+Verification:
+- Design review completed: [yes/no]
+- Accessibility review completed: [yes/no]
+- SEO review completed: [yes/no]
+- Design tokens defined: [yes/no]
+
+Allowed next move:
+- Approve design plan -> enter HANDOFF (to BabaDev)
+- Revise design decisions
 ```
 
 ## `FAILURE` template

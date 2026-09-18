@@ -435,6 +435,8 @@ Normal order: `STARTUP -> CHECKLIST -> DOCS -> REVIEW -> PLAN -> PATCH`
 
 Optional upstream (BabaScrumMaster only, skipped by default): `STARTUP -> INTAKE -> BACKLOG -> SPRINT -> TASK_PLAN -> SPEC -> CHECKLIST`
 
+Optional design step (BabaDesigner only, skipped by default): `PLAN -> DESIGN_PLAN -> HANDOFF`
+
 Optional trailing: `PATCH -> DRIFT` (or DRIFT on demand from any phase).
 
 Conditional rules:
@@ -446,6 +448,7 @@ Conditional rules:
 - Greenfield branch: an explicit from-scratch request, or a target repo with no existing source files, records CHECKLIST and REVIEW as deterministic greenfield skips; PLAN establishes conventions from the INTAKE `Stack/Style:` field, PATCH scaffolds.
 - Skip `SPRINT` on explicit user request; see `07-protocols.md` `## Scrum planning` for the canonical pipeline shape.
 - Skip `SPEC` when the user supplied a concrete target without asking for a spec artifact, or when the goal carries no spec-authoring need.
+- Skip `DESIGN_PLAN` when the target has no frontend UI/UX work and the user did not request a design review; proceed `PLAN -> HANDOFF -> PATCH`.
 - Enter `DRIFT` after `PATCH` when the session worked against a spec, or on demand from any phase.
 - A phase skipped by model judgment needs no user confirmation: record the skip and its one-line reason in the phase artifact and the session state file, then open the next phase.
 
@@ -477,7 +480,7 @@ Dimensions:
 4. Auto-correct - apply clear improvements; surface balanced tradeoffs as
    recommendations
 
-Skip: CHECKLIST, DOCS, BLOCKED, FAILURE, INTAKE, BACKLOG, SPRINT, TASK_PLAN, SPEC, HANDOFF, DRIFT, PLAN.
+Skip: CHECKLIST, DOCS, BLOCKED, FAILURE, INTAKE, BACKLOG, SPRINT, TASK_PLAN, SPEC, HANDOFF, DRIFT, PLAN, DESIGN_PLAN.
 
 ### Transition rules (key paths)
 
@@ -505,6 +508,8 @@ Skip: CHECKLIST, DOCS, BLOCKED, FAILURE, INTAKE, BACKLOG, SPRINT, TASK_PLAN, SPE
 - `TEST_STRATEGY -> HANDOFF`: TEST_STRATEGY output complete, receiving persona identified.
 - `PLAN -> PATCH`: user approval explicit, rewrite contract complete.
 - `PLAN -> HANDOFF`: active persona is BabaSensei, plan approval explicit.
+- `PLAN -> DESIGN_PLAN`: target includes frontend UI/UX work or user explicitly requested design review.
+- `DESIGN_PLAN -> HANDOFF`: design plan approved.
 - `PLAN -> DRIFT`: spec exists on disk and phase can run read-only.
 - `PATCH -> DRIFT`: session worked against a spec, PATCH verification passed.
 - `ANY PHASE -> DRIFT`: user explicitly requests drift analysis.
