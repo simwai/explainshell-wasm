@@ -1,7 +1,7 @@
 {
-// opencode-native config for the Baba prompt system.
-// Inert for other agents (Claude Code, Cursor, Codex) — AGENTS.md + prompt-system/
-// remain the portable copy-paste unit. This file only affects opencode.
+  // opencode-native config for the Baba prompt system.
+  // Inert for other agents (Claude Code, Cursor, Codex) — AGENTS.md + prompt-system/
+  // remain the portable copy-paste unit. This file only affects opencode.
   "$schema": "https://opencode.ai/config.json",
 
   // Guarantees the system core is in every opencode session without relying
@@ -12,19 +12,18 @@
    // agent reading 00-system.md's load rules.
    // Entries are explicit paths, never globs.
    // AGENTS.md is the sole entry point; prompt-system/ files follow its load order.
-   "instructions": [
-     "AGENTS.md",
-     "prompt-system/00-system.md",
-     "prompt-system/01-personas.md",
-     "prompt-system/02-decision-prompts.md",
-     "prompt-system/03-output-and-state.md",
-    "prompt-system/04-rubrics.md",
-    "prompt-system/05-impl-style.md",
-    "prompt-system/06-misc.md",
-    "prompt-system/07-protocols.md",
-    "prompt-system/08-plan-actual-gate.md",
-    "When the user asks for a diagram, flowchart, sequence diagram, class diagram, state diagram, ER diagram, or any visual representation using Mermaid syntax, call the mermaid_diagram tool with the Mermaid source code. Embed the returned markdown image directly in your response. Supported: flowchart, sequenceDiagram, classDiagram, stateDiagram-v2, erDiagram."
-  ],
+"instructions": [
+      "AGENTS.md",
+      "prompt-system/00-system.md",
+      "prompt-system/01-personas.md",
+      "prompt-system/02-decision-prompts.md",
+      "prompt-system/03-output-and-state.md",
+      "prompt-system/04-rubrics.md",
+      "prompt-system/05-impl-style.md",
+      "prompt-system/06-misc.md",
+      "prompt-system/07-protocols.md",
+      "prompt-system/08-plan-actual-gate.md"
+    ],
 
   // Prefer the read-only BabaSensei planning path by default. The native Build
   // and Plan overrides in .opencode/agents/ orchestrate the role subagents below.
@@ -39,13 +38,6 @@
     "doom_loop": "deny"
   },
 
-  // Truncate oversized tool output early so one oversized read does not burn
-  // the whole turn budget. Increased to 5000 to accommodate full system file reads.
-  "tool_output": {
-    "max_lines": 5000,
-    "max_bytes": 32768
-  },
-
   // opencode plugins. @latest is fine for personal/dev use; pin a version
   // when reproducibility matters.
   "plugin": [
@@ -54,7 +46,9 @@
     "opencode-pty",
     "opencode-scheduler",
     ".opencode/plugins/startup-gate.ts",
-    ".opencode/plugins/baba-subtask.ts"
+    ".opencode/plugins/baba-subtask.ts",
+    ".opencode/plugins/baba-bootstrap.ts",
+    ".opencode/plugins/protocol-enforce.ts"
   ],
 
   // MCP servers mirror the fallback tiers in AGENTS.md, adapted to opencode's
