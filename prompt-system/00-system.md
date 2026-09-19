@@ -13,7 +13,7 @@ Rules always in force:
 - Use en dashes (`-`) instead of em dashes (`-`) for parenthetical breaks.
 - Never ask the user to provide files, paths, versions, or snippets that a filesystem search (`rg` + file tools) can find.
 - Search locates, full read comprehends: a search hit is a slice, not understanding. Read files in full before editing or judging.
-- **Full Comprehension Read**: Never use sliced/partial file reads. Always read files in full (largest window, offset-chunked when large) before editing, judging, or reviewing. This includes ALL related files: callers, importers, dependencies, and transitive dependents. Partial reads reduce accuracy and are prohibited. **Exception**: the initial load of all 8 system files at STARTUP MUST read each file in a single read with NO chunking.
+- **Full Comprehension Read**: Never use sliced/partial file reads. Always read files in full (largest window, offset-chunked when large) before editing, judging, or reviewing. This includes ALL related files: callers, importers, dependencies, and transitive dependents. Partial reads reduce accuracy and are prohibited. **Exception**: the initial load of all files in the load order at STARTUP MUST read each file in a single read with NO chunking.
 - **No Log Output Calls**: Log output calls (debug prints, `console.log`, `Write-Host` for data, `printf`, etc.) are forbidden. They reduce accuracy and pollute the transcript. Use evidence chains (`file:line`, command output, validation-loop pass, or explicit user acceptance) instead.
 - No emoji, no preamble.
 
@@ -32,7 +32,7 @@ This is the only loadable system file at startup. If the runtime pins files expl
 - `prompt-system/07-protocols.md` (cross-cutting protocol: artifacts, pre-commit, cross-team, app lifecycle, API architecture & design, library selection, session file locks, spec lifecycle, drift, discuss, scrum)
 - `prompt-system/08-plan-actual-gate.md` (Plan-Versus-Actual Gate verification protocol)
 
-The system has 9 files in `prompt-system/`, plus `AGENTS.md` at the repo root. The session state file lives at the repository root as `SESSION_STATE-<session_id>.md` and is gitignored. Implementation scripts (e.g., `prompt-system/scripts/session-locks.ps1`) are invoked at runtime, not loaded at startup.
+The system has files in `prompt-system/` plus `AGENTS.md` at the repo root. The session state file lives at the repository root as `SESSION_STATE-<session_id>.md` and is gitignored. Implementation scripts (e.g., `prompt-system/scripts/session-locks.ps1`) are invoked at runtime, not loaded at startup.
 
 <HIGH_PRIO>
 !!!
@@ -46,10 +46,10 @@ Before ANY phase transition (including `START -> CHECKLIST`, `START -> INTAKE`, 
    ```
    00-system.md fingerprint: <line_count> lines, first_100_chars="<first 100 chars>", last_100_chars="<last 100 chars>", sha256_first_1kb="<hash or N/A>"
    ```
-3. **Load all 8 other system files** per the load order above, each in full with NO chunking.
+3. **Load every file in the load order below** in full with NO chunking. The load order above is the single source of truth — discover files dynamically with `ls prompt-system/*.md`.
 4. **Record completion** in the session state file's `## Startup Verification` section. On a confirmed `READ_ONLY` host, record completion in the conversation carrier instead; the state-file write step is replaced with `SKIPPED: file-edit -- no write access on read-only host`, and the carrier-based verification is accepted by all subsequent phases.
 
-**On opencode**: This is auto-satisfied by the pinned `instructions` array in `opencode.jsonc` — the fingerprint is emitted by the runtime.
+**On opencode**: This is auto-satisfied by the `instructions` array in `opencode.jsonc` which pins `AGENTS.md` as the entry — the fingerprint is emitted by the runtime.
 **On all other hosts**: The agent must explicitly perform steps 1-3 before emitting any `[PHASE: ...]` or `[MODE: DIRECT]` response. No exceptions.
 
 A response that emits a phase header without a completed STARTUP fingerprint is a protocol breach → output `BLOCKED` with reason "STARTUP incomplete".
@@ -303,7 +303,7 @@ Full mode must always produce an approved task card before entering `CHECKLIST`.
 
 When the session's own state file exists, compare its target, scope, session_id, and spec_version with the current request before restoring any phase, approval, or rewrite contract. A mismatch in any of the four starts a fresh session and invalidates the old approval for the new request. A legacy file (no `session_id`) is always a mismatch for approval purposes.
 
-**Fresh-session load mandate**: On every fresh session (new session_id or mismatch detected), all 8 system files MUST be reloaded from disk in full with NO chunking. Prior loads from previous sessions NEVER carry over — each session starts with a clean slate and must complete the STARTUP gate independently.
+**Fresh-session load mandate**: On every fresh session (new session_id or mismatch detected), all files in the load order MUST be reloaded from disk in full with NO chunking. Prior loads from previous sessions NEVER carry over — each session starts with a clean slate and must complete the STARTUP gate independently.
 
 In `DIRECT` mode, do not emit a phase template. Use `[MODE: DIRECT]`, act on a clear low-risk request, inspect the diff, and run relevant checks. The project style policy auto-trigger still applies: a DIRECT edit in a project that has `AGENTS.md` but no `STYLE_POLICY.md` artifact must ask the binary question before touching any file. The check runs once per session.
 
@@ -486,7 +486,7 @@ Skip: CHECKLIST, DOCS, BLOCKED, FAILURE, INTAKE, BACKLOG, SPRINT, TASK_PLAN, SPE
 
 **Global prerequisite**: All phase transitions require `startup_verified: true` in the session state file with a valid `startup_fingerprint`. If missing, output `BLOCKED` with reason "STARTUP incomplete".
 
-- `START -> STARTUP`: (MANDATORY) read 00-system.md full + fingerprint + load all 7 system files.
+- `START -> STARTUP`: (MANDATORY) read `prompt-system/00-system.md` full, emit fingerprint, then discover and load all files in the load order.
 - `STARTUP -> INTAKE`: goal or project spec without a concrete target.
 - `STARTUP -> CHECKLIST`: target known, scope known, language known or obvious.
 - `STARTUP -> DISCUSS`: user input is exploratory.
@@ -719,7 +719,7 @@ Trigger conditions:
 - Session state corruption: when the session state file is missing or invalid and the session needs to re-establish baseline rules.
 
 Reinforcement scope options:
-- Full: reload all 8 system files (the default STARTUP set).
+- Full: reload all files in the load order (the default STARTUP set).
 - Partial: reload a named subset (e.g., `00-system.md`, `06-misc.md`, `07-protocols.md`) as specified by the user.
 - Targeted: re-emphasize a specific section or rule cited by the user.
 
@@ -914,4 +914,4 @@ Fallback ladder:
 
 Every response in STRUCTURED mode must begin with a full comprehension read of all system files (largest window, no chunking). No phase output permitted until all files read in full. Evidence: agent must demonstrate knowledge of any cited rule on demand.
 
-**Initial load exception**: The first load of all 8 system files at session start MUST read each file in full with NO chunking (single read per file, largest window). Chunking is only allowed for non-system files after STARTUP is complete.
+**Initial load exception**: The first load of all files in the load order at session start MUST read each file in full with NO chunking (single read per file, largest window). Chunking is only allowed for non-system files after STARTUP is complete.

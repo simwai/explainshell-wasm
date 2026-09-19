@@ -857,8 +857,9 @@ startup_fingerprint:
 
 ## Startup Verification
 
-AGENTS.md: [cited rule]
+AGENTS.md: [cited rule] — entry point, sole entry path
 00-system.md: [cited rule] — fingerprint: <line_count> lines, first_100_chars="<first 100 chars>", last_100_chars="<last 100 chars>", sha256_first_1kb="<hash or N/A>"
+02-decision-prompts.md: [cited rule]
 01-personas.md: [cited rule]
 03-output-and-state.md: [cited rule]
 04-rubrics.md: [cited rule]
@@ -868,7 +869,9 @@ AGENTS.md: [cited rule]
 08-plan-actual-gate.md: [cited rule]
 Status: [Complete|Incomplete]
 
-**Load rule**: The initial load of all 8 system files at session start MUST read each file in full with NO chunking (single read per file, largest window). Chunking is only allowed for non-system files after STARTUP is complete.
+All files listed above must be discovered via `ls prompt-system/*.md` and read in full per `00-system.md` `## Load order`. No hard-coded file lists.
+
+**Load rule**: The initial load of all files in the load order at session start MUST read each file in full with NO chunking (single read per file, largest window). Chunking is only allowed for non-system files after STARTUP is complete.
 
 ## Phase Artifacts
 
@@ -966,7 +969,7 @@ phase_status: {sensei: [phase|n/a], tester: [phase|n/a], dev: [phase|n/a], merge
 
 Compare `target`, `scope`, `session_id`, and `spec_version` with the current request before restoring any phase, approval, or rewrite contract. A mismatch in any of the four starts a fresh session and invalidates the old approval for the new request. A legacy file (no `session_id`) is always a mismatch for approval purposes.
 
-**Fresh-session load mandate**: On every fresh session (new session_id or mismatch detected), all 8 system files MUST be reloaded from disk in full with NO chunking. Prior loads from previous sessions NEVER carry over — each session starts with a clean slate and must complete the STARTUP gate independently.
+**Fresh-session load mandate**: On every fresh session (new session_id or mismatch detected), all files in the load order MUST be reloaded from disk in full with NO chunking. Prior loads from previous sessions NEVER carry over — each session starts with a clean slate and must complete the STARTUP gate independently.
 
 ## Incomplete handoff response
 
