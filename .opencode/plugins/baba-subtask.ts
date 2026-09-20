@@ -671,7 +671,7 @@ async function handleSessionIdle(sessionID: string) {
 // Plugin entry
 // ============================================================================
 
-export const babaSubtask = async (input: PluginInput): Promise<Hooks> => {
+export default async (input: PluginInput): Promise<Hooks> => {
   setClient(input.client);
 
   const commandDirs = [

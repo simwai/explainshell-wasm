@@ -138,15 +138,7 @@ export default async ({ client, $, project, directory, worktree }: {
           `Missing files:\n${list}\n` +
           `Read them before producing ${detectedPhase} output.`;
 
-        try {
-          await client.message.create({
-            sessionID: sessionId,
-            role: "system",
-            content,
-          });
-        } catch {
-          // message injection failed; enforce via log only
-        }
+        console.log(`[prompt-system-loader] Missing files for ${detectedPhase}:\n${list}`);
       }
 
       state.lastNotifiedPhase = detectedPhase;

@@ -56,7 +56,7 @@ function getSessionState(sessionID: string, config: FeedbackConfig): SessionStat
   return initial;
 }
 
-export const AdaptiveTemperaturePlugin: Plugin = async (_ctx, options) => {
+export default async (_ctx: any, options?: Record<string, unknown>): Promise<any> => {
   const config = resolveConfig(options ?? {});
 
   return {

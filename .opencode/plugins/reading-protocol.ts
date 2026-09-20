@@ -13,6 +13,8 @@
  *   3. session.deleted  -> cleanup
  */
 
+import { readFile } from "node:fs/promises";
+
 interface ReadingPlanFile {
   path: string;
   status: "pending" | "complete" | "deferred";
@@ -41,7 +43,7 @@ function getOrCreateState(sessionId: string): ReadingState {
     state = {
       sessionId,
       plan: null,
-      readFingerprints: new Set(),
+      readFingerprints: new Set<string>(),
       blocked: false,
       lastUnreadFiles: [],
     };
@@ -59,7 +61,7 @@ async function computeImportClosure(
   targetPath: string,
   maxDepth: number,
   maxCalls: number,
-  $: any
+  client: any,
 ): Promise<string[]> {
   const excludedDirs = ["node_modules", "vendor", "prompt-system", "dist", "build", ".git", "__pycache__", ".venv", "venv"];
   const sourceExts = [".ts", ".tsx", ".js", ".jsx", ".py", ".java", ".go", ".rs", ".rb", ".php"];
@@ -100,7 +102,7 @@ async function computeImportClosure(
     const absolutePath = `${directory}/${current}`;
     let content: string;
     try {
-      content = await $.readText(absolutePath);
+      content = await readFile(absolutePath, "utf-8");
     } catch {
       continue;
     }
@@ -115,20 +117,26 @@ async function computeImportClosure(
       }
     }
 
-    const reverseMatches = await $.grep(`import\\s+.*?${escapeRegex(current.substring(current.lastIndexOf("/") + 1))}`, {
-      path: directory,
-      glob: "**/*.{ts,tsx,js,jsx}",
-      maxCount: 50,
-    });
-    if (reverseMatches && calls < maxCalls) {
-      for (const rm of reverseMatches) {
-        const rp = rm.replace(`${directory}/`, "");
-        if (!visited.has(rp) && isSource(rp)) {
-          queue.push({ path: rp, depth: depth + 1 });
+    const fileName = current.substring(current.lastIndexOf("/") >= 0 ? current.lastIndexOf("/") + 1 : current.length);
+    try {
+      const reverseResults = await client.find.text({
+        query: {
+          directory,
+          pattern: `import\\s+.*?${escapeRegex(fileName)}`,
+        },
+      });
+      if (reverseResults && calls < maxCalls) {
+        for (const rm of reverseResults) {
+          const rp = rm.path.text;
+          if (!visited.has(rp) && isSource(rp)) {
+            queue.push({ path: rp, depth: depth + 1 });
+          }
         }
       }
-      calls++;
+    } catch {
+      // reverse lookup unavailable; continue without it
     }
+    calls++;
   }
 
   for (const file of closure) {
@@ -136,7 +144,7 @@ async function computeImportClosure(
     const absolutePath = `${directory}/${base}`;
     let content: string;
     try {
-      content = await $.readText(absolutePath);
+      content = await readFile(absolutePath, "utf-8");
     } catch {
       continue;
     }
@@ -147,7 +155,7 @@ async function computeImportClosure(
     for (const tf of testFiles) {
       const testPath = `${directory}/${tf}`;
       try {
-        await $.readText(testPath);
+        await readFile(testPath, "utf-8");
         closure.add(tf);
       } catch {
         // test file does not exist, skip
@@ -174,7 +182,7 @@ export default async ({ client, $, project, directory, worktree }: {
 
       if (event.type === "session.created") {
         state.plan = null;
-        state.readFingerprints = new Set();
+        state.readFingerprints = new Set<string>();
         state.blocked = false;
         state.lastUnreadFiles = [];
         console.log(`[reading-protocol] Session created: ${sessionId}`);
@@ -190,7 +198,7 @@ export default async ({ client, $, project, directory, worktree }: {
             ? target.substring(directory.length + 1)
             : target;
 
-          const files = await computeImportClosure(directory, relativeTarget, 3, 30, $);
+          const files = await computeImportClosure(directory, relativeTarget, 3, 30, client);
 
           state.plan = {
             scope: relativeTarget,
@@ -209,17 +217,7 @@ export default async ({ client, $, project, directory, worktree }: {
               state.blocked = true;
               state.lastUnreadFiles = pendingFiles.map((f) => f.path);
               const unreadList = state.lastUnreadFiles.map((f) => `- ${f}`).join("\n");
-              const blockedMessage = `[PHASE: BLOCKED]\n# Reading Protocol Violation\nBlocked action: emit ${phase} output\nReason: Reading Plan is incomplete. The following files have not been read:\n${unreadList}\nNext required user action:\n- Continue reading the unread files, OR\n- Reply "partial" to proceed with partial scope (remaining files deferred)\nStatus: Waiting.`;
-              try {
-                await client.message.create({
-                  sessionID: sessionId,
-                  role: "system",
-                  content: blockedMessage,
-                });
-                console.log(`[reading-protocol] Blocked ${phase} output for ${sessionId}: ${pendingFiles.length} unread files`);
-              } catch (e) {
-                console.error(`[reading-protocol] Failed to send block message:`, e);
-              }
+              console.log(`[reading-protocol] Blocked ${phase} output for ${sessionId}: ${pendingFiles.length} unread files`);
               return;
             }
           }
