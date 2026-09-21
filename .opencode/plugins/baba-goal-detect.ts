@@ -69,9 +69,11 @@ export default async ({ client, $, project, directory, worktree }: {
       if (text.length < 40) return;             // too short to be a goal
 
       try {
-        await $`opencode tui toast show --title "Baba PM" --message "Goal detected — run /kickoff to bootstrap roadmap, sprint, stories, and ICE scores" --variant info`;
-      } catch (e) {
-        console.log("[baba-goal-detect] toast failed:", e);
+        await client.tui.showToast({
+          body: { variant: "info", message: "Goal detected — run /kickoff to bootstrap roadmap, sprint, stories, and ICE scores" },
+        });
+      } catch {
+        // tui may not be available
       }
 
       try {

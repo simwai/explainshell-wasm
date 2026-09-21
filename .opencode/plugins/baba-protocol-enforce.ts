@@ -14,8 +14,17 @@
  * metadata does not carry phase information.
  */
 
-import { getCurrentPhase, updatePhaseFromMessages } from "./phase-detect";
-import { exists, readFile } from "node:fs/promises";
+import { getCurrentPhase, updatePhaseFromMessages } from "./baba-phase-detect";
+import { access, readFile } from "node:fs/promises";
+
+async function fileExists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 interface ProtocolState {
   sessionId: string;
@@ -32,7 +41,7 @@ const PHASE_TRANSITIONS = {
   REVIEW: ["artifact-handling", "pre-commit", "locks", "api-design", "code-decision-ladder", "library-first"],
   PLAN: ["review-complete", "locks", "cross-team", "library-selection"],
   PATCH: ["plan-approved", "rewrite-contract", "locks", "code-decision-ladder", "library-first"],
-  DRIFT: ["spec-exists"],
+  DRIFT: ["spec-fileExists"],
   CHECKLIST: ["discovery", "artifact-handling"],
 };
 
@@ -40,7 +49,7 @@ const PROTOCOL_CHECKS = {
   "artifact-handling": async (_directory: string, _editedFiles: string[], _state: any) => {
     const checks = [];
     const gitignorePath = ".gitignore";
-    const hasGitignore = await exists(gitignorePath);
+    const hasGitignore = await fileExists(gitignorePath);
     if (!hasGitignore) {
       checks.push({ protocol: "artifact-handling", passed: false, message: ".gitignore missing" });
     } else {
@@ -53,7 +62,7 @@ const PROTOCOL_CHECKS = {
       }
     }
     const gitattributesPath = ".gitattributes";
-    const hasGitattributes = await exists(gitattributesPath);
+    const hasGitattributes = await fileExists(gitattributesPath);
     if (!hasGitattributes) {
       checks.push({ protocol: "gitattributes", passed: false, message: ".gitattributes missing (recommend: * text=auto eol=lf)" });
     }
@@ -64,8 +73,8 @@ const PROTOCOL_CHECKS = {
     const checks = [];
     const precommitPath = ".pre-commit-config.yaml";
     const huskyPath = ".husky/pre-commit";
-    const hasPrecommit = await exists(precommitPath);
-    const hasHusky = await exists(huskyPath);
+    const hasPrecommit = await fileExists(precommitPath);
+    const hasHusky = await fileExists(huskyPath);
     if (!hasPrecommit && !hasHusky) {
       checks.push({ protocol: "pre-commit", passed: false, message: "No pre-commit hooks configured (pre-commit or husky)" });
     } else {
@@ -85,14 +94,14 @@ const PROTOCOL_CHECKS = {
   "locks": async (_directory: string, editedFiles: string[], _state: any) => {
     const checks = [];
     const lockDir = ".session-locks";
-    const hasLockDir = await exists(lockDir);
+    const hasLockDir = await fileExists(lockDir);
     if (!hasLockDir && editedFiles.length > 0) {
       checks.push({ protocol: "locks", passed: false, message: "No .session-locks directory but files were edited" });
     }
     for (const file of editedFiles) {
       const flatName = file.replace(/[\\/]/g, "--");
       const lockPath = `${lockDir}/${flatName}.lock`;
-      const hasLock = await exists(lockPath);
+      const hasLock = await fileExists(lockPath);
       if (!hasLock) {
         checks.push({ protocol: "locks", passed: false, message: `No lock for edited file: ${file}` });
       }
@@ -103,7 +112,7 @@ const PROTOCOL_CHECKS = {
   "cross-team": async (_directory: string, _editedFiles: string[], _state: any) => {
     const checks = [];
     const changesPath = "CHANGES_REQUIRED.md";
-    const hasChanges = await exists(changesPath);
+    const hasChanges = await fileExists(changesPath);
     if (hasChanges) {
       const content = await readFile(changesPath, "utf-8");
       const unresolved = content.split("## ").filter((s: string) =>
@@ -139,10 +148,10 @@ const PROTOCOL_CHECKS = {
     return checks;
   },
 
-  "spec-exists": async (_directory: string, _editedFiles: string[], state: any) => {
+  "spec-fileExists": async (_directory: string, _editedFiles: string[], state: any) => {
     const checks = [];
     const specsDir = "SPECS";
-    const hasSpecs = await exists(specsDir);
+    const hasSpecs = await fileExists(specsDir);
     const specVersion = state.specVersion;
     if (!hasSpecs || !specVersion) {
       checks.push({ protocol: "spec", passed: false, message: "No SPECS/ directory or spec_version not set - DRIFT not applicable" });
@@ -194,7 +203,7 @@ const PROTOCOL_CHECKS = {
     const checks = [];
     if (editedFiles.length > 0) {
       const packageJsonPath = `${directory}/package.json`;
-      const hasPackageJson = await exists(packageJsonPath);
+      const hasPackageJson = await fileExists(packageJsonPath);
       if (hasPackageJson) {
         const pkg = JSON.parse(await readFile(packageJsonPath, "utf-8"));
         const allDeps = { ...pkg.dependencies, ...pkg.devDependencies };
@@ -242,6 +251,29 @@ async function checkProtocols(state: ProtocolState, directory: string) {
   return allChecks;
 }
 
+// Credential sanitization helpers (H1 compliance)
+function sanitizeGitRemoteGetUrl(name: string): string {
+  return `git remote get-url ${name} | ForEach-Object { $_ -replace '://[^/@]*@', '://<redacted>@' }`;
+}
+
+function sanitizeGitPushOutput(output: string): string {
+  return output
+    .replace(/^To\s+https?:\/\/\S+$/gm, "To <url>")
+    .replace(/oauth2:[^@\s]+@/g, "oauth2:<token>@")
+    .replace(/x-access-token:[^@\s]+@/g, "x-access-token:<token>@")
+    .replace(/https?:\/\/[^@\s]+@/g, "https://<redacted>@");
+}
+
+function sanitizeGitRemoteVerboseOutput(output: string): string {
+  return output
+    .replace(/^(\S+)\s+https?:\/\/[^\s]+\s+\(fetch\)/gm, "$1 (fetch)")
+    .replace(/^(\S+)\s+https?:\/\/[^\s]+\s+\(push\)/gm, "$1 (push)");
+}
+
+function sanitizeGitRemoteGetUrlOutput(output: string): string {
+  return output.replace(/:\/\/[^/@]*@/g, "://<redacted>@");
+}
+
 export default async ({ client, $, project, directory, worktree }: {
   client: any;
   $: any;
@@ -250,6 +282,50 @@ export default async ({ client, $, project, directory, worktree }: {
   worktree: string;
 }) => {
   return {
+    "tool.execute.before": async (input: { tool: string; args: any }, output: { args: any }) => {
+      if (input.tool !== "bash") return;
+      
+      const cmd = (input.args?.command || "").trim();
+      
+      // 1. git remote -v → rewrite to git remote (names only)
+      if (cmd === "git remote -v") {
+        output.args.command = "git remote";
+        return;
+      }
+      
+      // 2. git remote get-url <name> → sanitize via PowerShell
+      const getUrlMatch = cmd.match(/^git remote get-url\s+(\S+)$/);
+      if (getUrlMatch) {
+        const name = getUrlMatch[1];
+        output.args.command = sanitizeGitRemoteGetUrl(name);
+        return;
+      }
+    },
+
+    "tool.execute.after": async (input: { tool: string; args: any }, output: { output: string }) => {
+      if (input.tool !== "bash") return;
+      
+      const cmd = (input.args?.command || "").trim();
+      let out = output.output || "";
+      
+      // Belt-and-suspenders: sanitize git remote -v output if it slipped through
+      if (cmd === "git remote -v") {
+        out = sanitizeGitRemoteVerboseOutput(out);
+      }
+      
+      // Sanitize git push output
+      if (cmd.startsWith("git push")) {
+        out = sanitizeGitPushOutput(out);
+      }
+      
+      // Sanitize git remote get-url output
+      if (cmd.match(/^git remote get-url\s+/)) {
+        out = sanitizeGitRemoteGetUrlOutput(out);
+      }
+      
+      output.output = out;
+    },
+
     event: async ({ event }: { event: any }) => {
       const sessionId = event.properties?.sessionID;
       if (!sessionId) return;
