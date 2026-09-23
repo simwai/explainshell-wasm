@@ -13,6 +13,7 @@ interface LoaderState {
   requiredFiles: Set<string>;
   loadedFiles: Set<string>;
   lastNotifiedPhase: string;
+  planVersion: number; // 1 = initial, 2 = post-reload after PLAN v1 approval
 }
 
 const loaderStates = new Map<string, LoaderState>();
@@ -66,6 +67,7 @@ export default async ({ client, $, project, directory, worktree }: {
           requiredFiles: required,
           loadedFiles: new Set(),
           lastNotifiedPhase: "STARTUP",
+          planVersion: 1,
         });
         return;
       }
@@ -123,6 +125,13 @@ export default async ({ client, $, project, directory, worktree }: {
       }
 
       if (!detectedPhase || detectedPhase === state.lastNotifiedPhase) return;
+
+      // PLAN v1 → v2 transition: force full reload after PLAN v1 approval
+      if (detectedPhase === "PLAN" && state.planVersion === 1) {
+        state.planVersion = 2;
+        state.loadedFiles.clear(); // Forces full reload on next reads
+        console.log("[prompt-system-loader] PLAN v1→v2: forcing full reload");
+      }
 
       const missing = [...state.requiredFiles].filter(
         (f) => !state.loadedFiles.has(f),
