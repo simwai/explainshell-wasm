@@ -136,7 +136,7 @@ export default async ({ client, $, project, directory, worktree }: {
             }).slice(0, 10);
           }
 
-          // Check version drift: spec header Version vs SPECS/index.md registry
+          // Check version drift: spec header Version vs SPECS/INDEX.md registry
           async function checkVersionDrift(specPath: string, specContent: string): Promise<{ drift: boolean; specVersion: string; registryVersion: string } | null> {
             // Extract version from spec header
             const versionMatch = specContent.match(/^Version:\s*([\d.]+)/m);
@@ -144,7 +144,7 @@ export default async ({ client, $, project, directory, worktree }: {
             if (!specVersion) return null;
             
             // Read registry
-            const registryContent = await readFile(`${directory}/SPECS/index.md`);
+            const registryContent = await readFile(`${directory}/SPECS/INDEX.md`);
             const escapedPath = specPath.replace(/[/\\]/g, "\\\\");
             const registryMatch = registryContent.match(new RegExp(`\\|\\s*${escapedPath}\\s*\\|\\s*([\\d.]+)\\s*\\|`));
             const registryVersion = registryMatch?.[1];
