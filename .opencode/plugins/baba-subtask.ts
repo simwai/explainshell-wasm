@@ -79,7 +79,7 @@ const BABA_AGENTS = [
   "baba-dev",
   "baba-tester",
   "baba-reviewer",
-  "baba-scrummaster",
+  "baba-scrum",
 ];
 
 // ============================================================================
@@ -452,6 +452,38 @@ async function buildInlineSubtaskPart(
   return part;
 }
 
+async function waitForAssistantCompletion(
+  client: any,
+  sessionID: string,
+  timeoutMs = 2 * 60 * 1000,
+): Promise<string> {
+  const start = Date.now();
+  const pollInterval = 1000;
+
+  while (Date.now() - start < timeoutMs) {
+    const result = await client.session.messages({
+      path: { id: sessionID },
+    });
+
+    const messages = result.data ?? [];
+    const assistantMessages = messages
+      .filter((m: any) => m.info?.role === "assistant")
+      .sort((a: any, b: any) => (b.info?.time?.created ?? 0) - (a.info?.time?.created ?? 0));
+
+    const latest = assistantMessages[0];
+    if (latest?.info?.time?.completed) {
+      return (latest.parts ?? [])
+        .filter((p: any) => p.type === "text")
+        .map((p: any) => p.text)
+        .join("\n");
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, pollInterval));
+  }
+
+  return "(no response)";
+}
+
 // ============================================================================
 // Command hooks
 // ============================================================================
@@ -727,7 +759,7 @@ export default async (input: PluginInput): Promise<Hooks> => {
     tool: {
       task: tool({
         description:
-          "Delegate a task to a Baba subagent. Routes through baba-sensei, baba-dev, baba-tester, baba-reviewer, or baba-scrummaster.",
+          "Delegate a task to a Baba subagent. Routes through baba-sensei, baba-dev, baba-tester, baba-reviewer, or baba-scrum.",
         args: {
           prompt: tool.schema.string().describe("The task prompt to delegate"),
           agent: tool
@@ -748,16 +780,16 @@ export default async (input: PluginInput): Promise<Hooks> => {
                 agent,
               },
             });
-            const result = await (input.client as any).session.prompt({
-              path: { id: child.id },
+            await (input.client as any).session.prompt({
+              path: { id: child.data.id },
               body: {
                 parts: [{ type: "text", text: args.prompt }],
               },
             });
-            const text = (result.parts ?? [])
-              .filter((p: any) => p.type === "text")
-              .map((p: any) => p.text)
-              .join("\n");
+            const text = await waitForAssistantCompletion(
+              input.client as any,
+              child.data.id,
+            );
             return text || "(no response)";
           } catch (err) {
             return `Error: ${err instanceof Error ? err.message : String(err)}`;
@@ -810,16 +842,16 @@ Output format:
                 agent,
               },
             });
-            const result = await (input.client as any).session.prompt({
-              path: { id: child.id },
+            await (input.client as any).session.prompt({
+              path: { id: child.data.id },
               body: {
                 parts: [{ type: "text", text: prompt }],
               },
             });
-            const text = (result.parts ?? [])
-              .filter((p: any) => p.type === "text")
-              .map((p: any) => p.text)
-              .join("\n");
+            const text = await waitForAssistantCompletion(
+              input.client as any,
+              child.data.id,
+            );
             return text || "(no response)";
           } catch (err) {
             return `Error: ${err instanceof Error ? err.message : String(err)}`;

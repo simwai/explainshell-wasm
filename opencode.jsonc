@@ -44,6 +44,7 @@
     "opencode-vibeguard@latest",
     "opencode-adaptive-thinking@latest",
     "opencode-pty",
+    "opencode-scheduler",
     ".opencode/plugins/baba-startup-gate.ts",
     ".opencode/plugins/baba-reading-protocol.ts",
     ".opencode/plugins/baba-protocol-enforce.ts",
