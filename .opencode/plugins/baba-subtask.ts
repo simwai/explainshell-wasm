@@ -80,6 +80,9 @@ const BABA_AGENTS = [
   "baba-tester",
   "baba-reviewer",
   "baba-scrum",
+  "baba-designer",
+  "explore",
+  "general",
 ];
 
 // ============================================================================
